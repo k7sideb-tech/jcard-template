@@ -1,0 +1,294 @@
+/* J-Card Studio enhancements
+   Non-destructive layer added on top of the original template. */
+
+:root {
+  --studio-panel-bg: #101114;
+  --studio-panel-fg: #f7f4ed;
+  --studio-panel-muted: #aaa398;
+  --studio-panel-line: rgba(255, 255, 255, 0.14);
+  --studio-panel-accent: #ffb703;
+  --studio-marker-color: var(--jCardTextColor, #000);
+}
+
+#jcard-studio-panel {
+  background: var(--studio-panel-bg);
+  border: 1px solid var(--studio-panel-line);
+  border-radius: 18px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+  color: var(--studio-panel-fg);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 1rem;
+  overflow: hidden;
+}
+
+#jcard-studio-panel * {
+  box-sizing: border-box;
+}
+
+#jcard-studio-panel .studio-header {
+  align-items: flex-start;
+  background:
+    radial-gradient(circle at top left, rgba(255, 183, 3, 0.26), transparent 32%),
+    linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,0));
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+#jcard-studio-panel .studio-title {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0 0 .25rem;
+}
+
+#jcard-studio-panel .studio-subtitle {
+  color: var(--studio-panel-muted);
+  font-size: .78rem;
+  line-height: 1.35;
+  margin: 0;
+}
+
+#jcard-studio-panel .studio-badge {
+  background: var(--studio-panel-accent);
+  border-radius: 999px;
+  color: #17120a;
+  flex: 0 0 auto;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  padding: .35rem .55rem;
+  text-transform: uppercase;
+}
+
+#jcard-studio-panel .studio-grid {
+  display: grid;
+  gap: .8rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  padding: 1rem;
+}
+
+#jcard-studio-panel .studio-field {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  min-width: 0;
+}
+
+#jcard-studio-panel label {
+  color: var(--studio-panel-muted);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+#jcard-studio-panel select,
+#jcard-studio-panel input[type="range"] {
+  width: 100%;
+}
+
+#jcard-studio-panel select,
+#jcard-studio-panel input[type="color"] {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid var(--studio-panel-line);
+  border-radius: 12px;
+  color: var(--studio-panel-fg);
+  min-height: 2.4rem;
+  padding: .45rem .55rem;
+}
+
+#jcard-studio-panel select option {
+  color: #111;
+}
+
+#jcard-studio-panel input[type="color"] {
+  padding: .2rem;
+}
+
+#jcard-studio-panel input[type="range"] {
+  accent-color: var(--studio-panel-accent);
+}
+
+#jcard-studio-panel .studio-check {
+  align-items: center;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--studio-panel-line);
+  border-radius: 14px;
+  display: flex;
+  gap: .55rem;
+  padding: .65rem;
+}
+
+#jcard-studio-panel .studio-check label {
+  color: var(--studio-panel-fg);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#jcard-studio-panel .studio-actions {
+  border-top: 1px solid var(--studio-panel-line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  padding: 1rem;
+}
+
+#jcard-studio-panel button {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid var(--studio-panel-line);
+  border-radius: 999px;
+  color: var(--studio-panel-fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 800;
+  padding: .62rem .85rem;
+}
+
+#jcard-studio-panel button[data-primary="true"] {
+  background: var(--studio-panel-accent);
+  color: #17120a;
+}
+
+#jcard .template {
+  --studio-image-url: none;
+  --studio-image-opacity: 1;
+  --studio-image-size: cover;
+  --studio-image-position: center center;
+}
+
+#jcard .template.studio-modern {
+  border-radius: 3px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .18);
+  overflow: hidden;
+}
+
+#jcard .template .template-boundaries {
+  transition: background-color .2s ease;
+}
+
+#jcard .template.studio-has-bg::before,
+#jcard .template .studio-zone-bg::before {
+  background-image: var(--studio-image-url);
+  background-position: var(--studio-image-position);
+  background-repeat: no-repeat;
+  background-size: var(--studio-image-size);
+  content: "";
+  inset: 0;
+  opacity: var(--studio-image-opacity);
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+#jcard .template.studio-has-bg > * {
+  position: relative;
+}
+
+#jcard .template.studio-image-full::before {
+  display: block;
+}
+
+#jcard .template.studio-image-front .template-front,
+#jcard .template.studio-image-front-spine .template-front,
+#jcard .template.studio-image-front-spine .template-spine,
+#jcard .template.studio-image-back .template-back {
+  overflow: hidden;
+}
+
+#jcard .template.studio-image-front .template-front::before,
+#jcard .template.studio-image-front-spine .template-front::before,
+#jcard .template.studio-image-front-spine .template-spine::before,
+#jcard .template.studio-image-back .template-back::before {
+  background-image: var(--studio-image-url);
+  background-position: var(--studio-image-position);
+  background-repeat: no-repeat;
+  background-size: var(--studio-image-size);
+  content: "";
+  inset: 0;
+  opacity: var(--studio-image-opacity);
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
+#jcard .template.studio-image-front .template-cover,
+#jcard .template.studio-image-front-spine .template-cover,
+#jcard .template.studio-image-full .template-cover,
+#jcard .template.studio-image-back .template-cover,
+#jcard .template.studio-image-none .template-cover {
+  display: none;
+}
+
+#jcard .template.studio-image-cover .template-cover {
+  display: block;
+}
+
+#jcard .template.studio-preset-clean {
+  --studio-panel-accent: #111111;
+}
+
+#jcard .template.studio-preset-vintage {
+  letter-spacing: .02em;
+}
+
+#jcard .template.studio-preset-zine {
+  filter: contrast(1.16) saturate(.75);
+}
+
+#jcard .template.studio-preset-pop .template-front-title-group,
+#jcard .template.studio-preset-pop .template-spine-title-group {
+  letter-spacing: .045em;
+}
+
+#jcard .template.studio-preset-minimal .template-contents,
+#jcard .template.studio-preset-minimal .template-footer,
+#jcard .template.studio-preset-minimal .template-note-group {
+  opacity: .82;
+}
+
+#jcard .printable-crop::before,
+#jcard .printable-crop::after,
+#jcard .printable-fold::before {
+  border-color: var(--studio-marker-color, var(--jCardTextColor)) !important;
+}
+
+#jcard .studio-verso {
+  margin-top: .35in;
+}
+
+#jcard:not(.studio-show-verso) .studio-verso {
+  display: none;
+}
+
+#jcard .studio-verso.studio-verso-blank .template-back,
+#jcard .studio-verso.studio-verso-blank .template-spine,
+#jcard .studio-verso.studio-verso-blank .template-front,
+#jcard .studio-verso.studio-verso-image-only .template-back,
+#jcard .studio-verso.studio-verso-image-only .template-spine,
+#jcard .studio-verso.studio-verso-image-only .template-front {
+  color: transparent !important;
+}
+
+#jcard .studio-verso.studio-mirror-verso {
+  transform: scaleX(-1);
+}
+
+@media print {
+  #jcard-studio-panel {
+    display: none !important;
+  }
+
+  #jcard.studio-print-verso .studio-verso {
+    break-before: page;
+    display: block !important;
+    page-break-before: always;
+  }
+
+  #jcard .template.studio-modern {
+    box-shadow: none;
+  }
+}
