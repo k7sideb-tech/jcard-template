@@ -1,168 +1,144 @@
-// J-Card Studio enhancements
-// Non-destructive UI and print customisation layer for the original template.
+// J-Card Studio — precise image layer controls
+// Focus: image size, position and covered area.
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
-const state = {
-  preset: 'clean',
-  font: 'Alte Haas Grotesk',
-  imageMode: 'cover',
-  imageFit: 'cover',
-  imagePosition: 'center center',
-  imageOpacity: 1,
-  cardColor: '#ffffff',
-  textColor: '#000000',
-  markerColor: '#000000',
-  accentColor: '#ffb703',
-  showVerso: false,
-  versoMode: 'blank',
-  mirrorVerso: true,
+const zones = {
+  none: { label: 'Aucune image', left: 0, top: 0, width: 0, height: 0 },
+  cover: { label: 'Couverture originale', left: 72.1, top: 0, width: 27.9, height: 63.9 },
+  front: { label: 'Face avant complète', left: 72.1, top: 0, width: 27.9, height: 100 },
+  spine: { label: 'Tranche seule', left: 66.65, top: 0, width: 5.45, height: 100 },
+  frontSpine: { label: 'Face avant + tranche', left: 66.65, top: 0, width: 33.35, height: 100 },
+  back: { label: 'Volets arrière', left: 0, top: 0, width: 66.65, height: 100 },
+  full: { label: 'Toute la J-card', left: 0, top: 0, width: 100, height: 100 },
+  custom: { label: 'Rectangle personnalisé', left: 72.1, top: 0, width: 27.9, height: 63.9 },
 };
 
-const presets = {
-  clean: {
-    cardColor: '#ffffff',
-    textColor: '#111111',
-    markerColor: '#111111',
-    accentColor: '#111111',
-    font: 'Inter, Arial, sans-serif',
-  },
-  vintage: {
-    cardColor: '#f4ead7',
-    textColor: '#2d2118',
-    markerColor: '#7b5f3e',
-    accentColor: '#c47f2c',
-    font: 'Georgia, Times New Roman, serif',
-  },
-  zine: {
-    cardColor: '#f8f8f8',
-    textColor: '#050505',
-    markerColor: '#050505',
-    accentColor: '#050505',
-    font: 'Arial Black, Impact, sans-serif',
-  },
-  pop: {
-    cardColor: '#ffe45e',
-    textColor: '#111111',
-    markerColor: '#111111',
-    accentColor: '#ff4d6d',
-    font: 'Trebuchet MS, Arial, sans-serif',
-  },
-  minimal: {
-    cardColor: '#f6f3ee',
-    textColor: '#222222',
-    markerColor: '#b7aea2',
-    accentColor: '#6c757d',
-    font: 'Helvetica Neue, Helvetica, Arial, sans-serif',
-  },
+const state = {
+  zone: 'cover',
+  fit: 'cover',
+  layerLeft: zones.cover.left,
+  layerTop: zones.cover.top,
+  layerWidth: zones.cover.width,
+  layerHeight: zones.cover.height,
+  imageX: 50,
+  imageY: 50,
+  zoom: 100,
+  opacity: 1,
+  showZone: true,
+  hideOriginalCover: true,
+  showVerso: false,
+  mirrorVerso: true,
 };
 
 function originalTemplate() {
   return $('#jcard .template:not(.studio-verso)');
 }
 
-function currentCoverUrl() {
+function currentCoverSrc() {
   const cover = $('#jcard .template-cover');
-  if (!cover || !cover.getAttribute('src')) return 'none';
-  return `url("${cover.getAttribute('src').replaceAll('"', '%22')}")`;
+  return cover?.getAttribute('src') || '';
 }
 
-function setNativeValue(id, value) {
-  const element = document.getElementById(id);
-  if (!element) return;
-  element.value = value;
-  element.dispatchEvent(new Event('input', { bubbles: true }));
-  element.dispatchEvent(new Event('change', { bubbles: true }));
+function currentCoverUrl() {
+  const src = currentCoverSrc();
+  if (!src) return 'none';
+  return `url("${src.replaceAll('"', '%22')}")`;
 }
 
-function setCheckboxValue(id, value) {
-  const element = document.getElementById(id);
-  if (!element) return;
-  element.checked = Boolean(value);
-  element.dispatchEvent(new Event('input', { bubbles: true }));
-  element.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
-function syncToOriginalControls() {
-  setNativeValue('card-color', state.cardColor);
-  setNativeValue('text-color', state.textColor);
-  setNativeValue('font-family', state.font);
-  setCheckboxValue('fill-cover', state.imageMode === 'cover' && state.imageFit === 'cover');
-}
-
-function removePresetClasses(template) {
-  template.classList.remove(
-    'studio-preset-clean',
-    'studio-preset-vintage',
-    'studio-preset-zine',
-    'studio-preset-pop',
-    'studio-preset-minimal'
-  );
-}
-
-function applyTemplateClasses(template) {
-  if (!template) return;
-  removePresetClasses(template);
-  template.classList.add('studio-modern', `studio-preset-${state.preset}`);
-  template.classList.remove(
-    'studio-has-bg',
-    'studio-image-cover',
-    'studio-image-front',
-    'studio-image-front-spine',
-    'studio-image-full',
-    'studio-image-back',
-    'studio-image-none'
-  );
-  template.classList.add(`studio-image-${state.imageMode}`);
-  if (state.imageMode !== 'cover' && state.imageMode !== 'none') {
-    template.classList.add('studio-has-bg');
+function syncOriginalCoverVisibility() {
+  const fillCover = document.getElementById('fill-cover');
+  if (fillCover && state.hideOriginalCover) {
+    fillCover.checked = false;
+    fillCover.dispatchEvent(new Event('change', { bubbles: true }));
   }
+}
+
+function ensureImageLayer(template) {
+  if (!template) return null;
+  let layer = $('.studio-image-layer', template);
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.className = 'studio-image-layer';
+    template.prepend(layer);
+  }
+  return layer;
+}
+
+function removeImageLayer(template) {
+  $('.studio-image-layer', template)?.remove();
+}
+
+function applyImageLayer(template) {
+  if (!template) return;
+  const layer = ensureImageLayer(template);
+  template.classList.add('studio-image-editor');
+  template.classList.toggle('studio-image-none', state.zone === 'none');
+  template.classList.toggle('studio-show-zone', state.showZone);
+  template.classList.toggle('studio-hide-original-cover', state.hideOriginalCover);
+
+  const size = state.fit === 'manual' ? `${state.zoom}% auto` : state.fit;
   template.style.setProperty('--studio-image-url', currentCoverUrl());
-  template.style.setProperty('--studio-image-size', state.imageFit);
-  template.style.setProperty('--studio-image-position', state.imagePosition);
-  template.style.setProperty('--studio-image-opacity', state.imageOpacity);
-  template.style.setProperty('--studio-marker-color', state.markerColor);
-  template.style.setProperty('--jCardCardColor', state.cardColor);
-  template.style.setProperty('--jCardTextColor', state.textColor);
-  template.style.setProperty('--jCardFontFamily', state.font);
+  template.style.setProperty('--studio-layer-left', `${state.layerLeft}%`);
+  template.style.setProperty('--studio-layer-top', `${state.layerTop}%`);
+  template.style.setProperty('--studio-layer-width', `${state.layerWidth}%`);
+  template.style.setProperty('--studio-layer-height', `${state.layerHeight}%`);
+  template.style.setProperty('--studio-image-size', size);
+  template.style.setProperty('--studio-image-position', `${state.imageX}% ${state.imageY}%`);
+  template.style.setProperty('--studio-image-opacity', state.opacity);
+  if (layer) layer.setAttribute('aria-hidden', 'true');
+}
+
+function applyZone(zoneKey) {
+  state.zone = zoneKey;
+  if (zoneKey !== 'custom') {
+    const zone = zones[zoneKey];
+    state.layerLeft = zone.left;
+    state.layerTop = zone.top;
+    state.layerWidth = zone.width;
+    state.layerHeight = zone.height;
+  }
+  applyAll();
+  refreshPanelValues();
 }
 
 function rebuildVerso() {
   const root = $('#jcard');
   const template = originalTemplate();
   if (!root || !template) return;
+
   $$('.studio-verso', root).forEach((node) => node.remove());
-  if (!state.showVerso) {
-    root.classList.remove('studio-show-verso', 'studio-print-verso');
-    return;
-  }
+  root.classList.toggle('studio-show-verso', state.showVerso);
+  root.classList.toggle('studio-print-verso', state.showVerso);
+
+  if (!state.showVerso) return;
   const clone = template.cloneNode(true);
-  clone.classList.add('studio-verso', `studio-verso-${state.versoMode}`);
-  if (state.mirrorVerso) clone.classList.add('studio-mirror-verso');
-  if (state.versoMode === 'image-only') {
-    clone.classList.remove('studio-image-none', 'studio-image-cover');
-    clone.classList.add('studio-has-bg', 'studio-image-full');
-  }
+  clone.classList.add('studio-verso');
+  clone.classList.toggle('studio-mirror-verso', state.mirrorVerso);
+  removeImageLayer(clone);
   root.appendChild(clone);
-  root.classList.add('studio-show-verso', 'studio-print-verso');
-  applyTemplateClasses(clone);
+  applyImageLayer(clone);
 }
 
-function applyAll({ sync = true } = {}) {
-  if (sync) syncToOriginalControls();
-  const template = originalTemplate();
-  applyTemplateClasses(template);
-  document.documentElement.style.setProperty('--studio-panel-accent', state.accentColor);
+function applyAll() {
+  syncOriginalCoverVisibility();
+  applyImageLayer(originalTemplate());
   rebuildVerso();
 }
 
-function makeField(labelText, control) {
+function makeField(labelText, control, helpText = '') {
   const wrap = document.createElement('div');
   wrap.className = 'studio-field';
   const label = document.createElement('label');
   label.textContent = labelText;
   wrap.append(label, control);
+  if (helpText) {
+    const help = document.createElement('p');
+    help.className = 'studio-help';
+    help.textContent = helpText;
+    wrap.append(help);
+  }
   return wrap;
 }
 
@@ -179,210 +155,211 @@ function makeSelect(options, value, onChange) {
   return select;
 }
 
-function makeColor(value, onChange) {
+function makeNumber(value, min, max, step, onChange) {
   const input = document.createElement('input');
-  input.type = 'color';
-  input.value = value;
-  input.addEventListener('input', () => onChange(input.value));
-  return input;
-}
-
-function makeRange(value, min, max, step, onChange) {
-  const input = document.createElement('input');
-  input.type = 'range';
+  input.type = 'number';
   input.min = min;
   input.max = max;
   input.step = step;
-  input.value = value;
-  input.addEventListener('input', () => onChange(input.value));
+  input.value = round(value);
+  input.addEventListener('input', () => {
+    const next = clamp(parseFloat(input.value), min, max);
+    if (Number.isFinite(next)) onChange(next);
+  });
   return input;
+}
+
+function makeSlider(value, min, max, step, onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'studio-slider-row';
+  const range = document.createElement('input');
+  range.type = 'range';
+  range.min = min;
+  range.max = max;
+  range.step = step;
+  range.value = value;
+  const number = makeNumber(value, min, max, step, (next) => {
+    range.value = next;
+    onChange(next);
+  });
+  range.addEventListener('input', () => {
+    number.value = range.value;
+    onChange(parseFloat(range.value));
+  });
+  wrap.append(range, number);
+  return wrap;
 }
 
 function makeCheckbox(labelText, value, onChange) {
   const wrap = document.createElement('div');
-  wrap.className = 'studio-check';
+  wrap.className = 'studio-field';
+  const row = document.createElement('label');
+  row.style.display = 'flex';
+  row.style.gap = '.55rem';
+  row.style.alignItems = 'center';
+  row.style.color = 'var(--studio-panel-fg)';
+  row.style.textTransform = 'none';
+  row.style.letterSpacing = '0';
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.checked = value;
-  const label = document.createElement('label');
-  label.textContent = labelText;
   input.addEventListener('change', () => onChange(input.checked));
-  wrap.append(input, label);
+  const span = document.createElement('span');
+  span.textContent = labelText;
+  row.append(input, span);
+  wrap.append(row);
   return wrap;
 }
 
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
+function setCustomFromCurrent() {
+  state.zone = 'custom';
+}
+
 function buildPanel() {
-  if ($('#jcard-studio-panel')) return;
+  $('#jcard-studio-panel')?.remove();
   const panel = document.createElement('section');
   panel.id = 'jcard-studio-panel';
   panel.innerHTML = `
     <div class="studio-header">
       <div>
-        <h2 class="studio-title">J-Card Studio</h2>
-        <p class="studio-subtitle">Design moderne, image par zones et option recto-verso sans modifier le moteur original.</p>
+        <h2 class="studio-title">Image de la J-card</h2>
+        <p class="studio-subtitle">Choisis la zone que l’image couvre, puis règle précisément sa position, sa taille, son zoom et son cadrage. Les valeurs sont en pourcentage de la J-card complète.</p>
       </div>
-      <span class="studio-badge">V1</span>
+      <span class="studio-badge">Image</span>
     </div>
   `;
+
   const grid = document.createElement('div');
   grid.className = 'studio-grid';
 
   grid.append(
-    makeField('Preset', makeSelect([
-      ['clean', 'Clean label'],
-      ['vintage', 'Vintage cream'],
-      ['zine', 'Black zine'],
-      ['pop', 'Pop color'],
-      ['minimal', 'Minimal soft'],
-    ], state.preset, (value) => {
-      state.preset = value;
-      Object.assign(state, presets[value]);
+    makeField('Zone couverte', makeSelect(Object.entries(zones).map(([key, zone]) => [key, zone.label]), state.zone, applyZone), 'Utilise “rectangle personnalisé” pour couvrir exactement une partie précise des volets.'),
+    makeField('Cadrage', makeSelect([
+      ['cover', 'Remplir la zone / crop'],
+      ['contain', 'Voir l’image entière'],
+      ['manual', 'Zoom manuel'],
+    ], state.fit, (value) => {
+      state.fit = value;
       applyAll();
       refreshPanelValues();
     })),
-    makeField('Typo', makeSelect([
-      ['Alte Haas Grotesk', 'Originale'],
-      ['Inter, Arial, sans-serif', 'Inter / moderne'],
-      ['Helvetica Neue, Helvetica, Arial, sans-serif', 'Helvetica'],
-      ['Georgia, Times New Roman, serif', 'Serif vintage'],
-      ['Courier New, monospace', 'Typewriter'],
-      ['Arial Black, Impact, sans-serif', 'Poster bold'],
-    ], state.font, (value) => {
-      state.font = value;
+    makeField('Gauche de la zone %', makeSlider(state.layerLeft, -30, 130, 0.5, (value) => {
+      setCustomFromCurrent();
+      state.layerLeft = value;
+      applyAll();
+      refreshPanelValues(false);
+    })),
+    makeField('Haut de la zone %', makeSlider(state.layerTop, -30, 130, 0.5, (value) => {
+      setCustomFromCurrent();
+      state.layerTop = value;
+      applyAll();
+      refreshPanelValues(false);
+    })),
+    makeField('Largeur de la zone %', makeSlider(state.layerWidth, 1, 160, 0.5, (value) => {
+      setCustomFromCurrent();
+      state.layerWidth = value;
+      applyAll();
+      refreshPanelValues(false);
+    })),
+    makeField('Hauteur de la zone %', makeSlider(state.layerHeight, 1, 160, 0.5, (value) => {
+      setCustomFromCurrent();
+      state.layerHeight = value;
+      applyAll();
+      refreshPanelValues(false);
+    })),
+    makeField('Image X %', makeSlider(state.imageX, 0, 100, 1, (value) => {
+      state.imageX = value;
+      applyAll();
+    }), 'Déplace le point focal de l’image dans la zone.'),
+    makeField('Image Y %', makeSlider(state.imageY, 0, 100, 1, (value) => {
+      state.imageY = value;
       applyAll();
     })),
-    makeField('Image', makeSelect([
-      ['cover', 'Couverture originale'],
-      ['front', 'Toute la face avant'],
-      ['front-spine', 'Face avant + tranche'],
-      ['full', 'Toute la J-card'],
-      ['back', 'Volets arrière seulement'],
-      ['none', 'Aucune image'],
-    ], state.imageMode, (value) => {
-      state.imageMode = value;
+    makeField('Zoom manuel %', makeSlider(state.zoom, 10, 400, 1, (value) => {
+      state.fit = 'manual';
+      state.zoom = value;
+      applyAll();
+      refreshPanelValues(false);
+    })),
+    makeField('Opacité', makeSlider(state.opacity, 0.05, 1, 0.05, (value) => {
+      state.opacity = value;
       applyAll();
     })),
-    makeField('Cadrage image', makeSelect([
-      ['cover', 'Remplir / crop'],
-      ['contain', 'Contenir entier'],
-      ['auto', 'Taille réelle'],
-    ], state.imageFit, (value) => {
-      state.imageFit = value;
-      applyAll(false);
-    })),
-    makeField('Position image', makeSelect([
-      ['center center', 'Centre'],
-      ['top center', 'Haut'],
-      ['bottom center', 'Bas'],
-      ['center left', 'Gauche'],
-      ['center right', 'Droite'],
-    ], state.imagePosition, (value) => {
-      state.imagePosition = value;
-      applyAll(false);
-    })),
-    makeField('Opacité image', makeRange(state.imageOpacity, 0.15, 1, 0.05, (value) => {
-      state.imageOpacity = value;
-      applyAll(false);
-    })),
-    makeField('Fond', makeColor(state.cardColor, (value) => {
-      state.cardColor = value;
+    makeCheckbox('Afficher le contour de la zone image', state.showZone, (value) => {
+      state.showZone = value;
       applyAll();
-    })),
-    makeField('Texte', makeColor(state.textColor, (value) => {
-      state.textColor = value;
-      applyAll();
-    })),
-    makeField('Repères', makeColor(state.markerColor, (value) => {
-      state.markerColor = value;
-      applyAll(false);
-    })),
-    makeField('Accent UI', makeColor(state.accentColor, (value) => {
-      state.accentColor = value;
-      applyAll(false);
-    })),
-    makeCheckbox('Ajouter une page verso pour le recto-verso', state.showVerso, (value) => {
-      state.showVerso = value;
-      applyAll(false);
     }),
-    makeField('Type de verso', makeSelect([
-      ['blank', 'Verso vierge + repères'],
-      ['same', 'Verso identique'],
-      ['image-only', 'Verso image seule'],
-    ], state.versoMode, (value) => {
-      state.versoMode = value;
-      applyAll(false);
-    })),
+    makeCheckbox('Masquer l’image originale de couverture', state.hideOriginalCover, (value) => {
+      state.hideOriginalCover = value;
+      applyAll();
+    }),
+    makeCheckbox('Créer une deuxième page verso', state.showVerso, (value) => {
+      state.showVerso = value;
+      applyAll();
+    }),
     makeCheckbox('Inverser horizontalement le verso', state.mirrorVerso, (value) => {
       state.mirrorVerso = value;
-      applyAll(false);
+      applyAll();
     })
   );
 
   const actions = document.createElement('div');
   actions.className = 'studio-actions';
+
+  const coverBtn = document.createElement('button');
+  coverBtn.type = 'button';
+  coverBtn.textContent = 'Zone couverture';
+  coverBtn.addEventListener('click', () => applyZone('cover'));
+
+  const fullBtn = document.createElement('button');
+  fullBtn.type = 'button';
+  fullBtn.textContent = 'Image sur toute la J-card';
+  fullBtn.addEventListener('click', () => applyZone('full'));
+
+  const frontBtn = document.createElement('button');
+  frontBtn.type = 'button';
+  frontBtn.textContent = 'Image face avant';
+  frontBtn.addEventListener('click', () => applyZone('front'));
+
   const printBtn = document.createElement('button');
   printBtn.type = 'button';
   printBtn.dataset.primary = 'true';
   printBtn.textContent = 'Imprimer / PDF';
   printBtn.addEventListener('click', () => window.print());
-  const resetBtn = document.createElement('button');
-  resetBtn.type = 'button';
-  resetBtn.textContent = 'Reset studio';
-  resetBtn.addEventListener('click', () => {
-    Object.assign(state, {
-      preset: 'clean',
-      imageMode: 'cover',
-      imageFit: 'cover',
-      imagePosition: 'center center',
-      imageOpacity: 1,
-      showVerso: false,
-      versoMode: 'blank',
-      mirrorVerso: true,
-    }, presets.clean);
-    refreshPanelValues();
-    applyAll();
-  });
-  actions.append(printBtn, resetBtn);
+
+  actions.append(coverBtn, fullBtn, frontBtn, printBtn);
   panel.append(grid, actions);
 
   const target = $('#template') || $('#output')?.parentElement || document.body;
   target.insertAdjacentElement('afterend', panel);
 }
 
-function refreshPanelValues() {
-  const panel = $('#jcard-studio-panel');
-  if (!panel) return;
-  const controls = $$('select, input', panel);
-  const values = [
-    state.preset,
-    state.font,
-    state.imageMode,
-    state.imageFit,
-    state.imagePosition,
-    String(state.imageOpacity),
-    state.cardColor,
-    state.textColor,
-    state.markerColor,
-    state.accentColor,
-    state.showVerso,
-    state.versoMode,
-    state.mirrorVerso,
-  ];
-  controls.forEach((control, index) => {
-    if (control.type === 'checkbox') control.checked = Boolean(values[index]);
-    else control.value = values[index];
-  });
+function refreshPanelValues(rebuild = true) {
+  if (rebuild) {
+    buildPanel();
+    return;
+  }
+  const zoneSelect = $('#jcard-studio-panel select');
+  if (zoneSelect) zoneSelect.value = state.zone;
 }
 
 function observeCoverChanges() {
   const cover = $('#jcard .template-cover');
   if (!cover) return;
-  const observer = new MutationObserver(() => applyAll(false));
+  const observer = new MutationObserver(() => applyAll());
   observer.observe(cover, { attributes: true, attributeFilter: ['src'] });
 }
 
 function boot() {
-  Object.assign(state, presets.clean);
   buildPanel();
   observeCoverChanges();
   applyAll();
